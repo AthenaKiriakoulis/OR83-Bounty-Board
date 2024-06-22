@@ -1,26 +1,10 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
-export default defineConfig({ 
-  plugins: [
-    react()
-    
-  ],
-  //base: './', // added
-  /*
+export default defineConfig({
+  plugins: [react()],
   build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        format: 'esm',
-        assetFileNames: 'assets/[name]-[hash][extname]',
-        chunkFileNames: 'assets/[name]-[hash][extname]',
-        entryFileNames: 'assets/[name]-[hash]'
-      }
-    }
-
+    outDir: 'dist'
   },
-  */
-  }) 
+  base: '/' // Adjust this if your app is served from a subdirectory
+});
