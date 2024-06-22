@@ -10,15 +10,8 @@
     }
   ], 
 
-  
+
   "routes": [
-    {
-      "src": "/(.*)",
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8"
-      },
-      "dest": "/index.html"
-    },
     {
       "src": "/(.*).js",
       "headers": {
