@@ -120,6 +120,10 @@ function Map2(props){
         event.preventDefault();
         const newX = (showForm[0]) / rect.width;
         const newY = (showForm[1]) / rect.height;
+        if(input.type == undefined){
+            input.type = "NPC";
+        }
+        
         
         setPoints((points) => {
             const newPoints = [...points, {
