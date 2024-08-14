@@ -8,9 +8,7 @@
         "distDir": "dist"
       }
     }
-  ], 
-
-
+  ],
   "routes": [
     {
       "src": "/(.*).js",
@@ -25,6 +23,11 @@
         "Content-Type": "text/css; charset=utf-8"
       },
       "dest": "/$1.css"
+    },
+    {
+      "src": "/[^.]+", 
+      "dest": "/", 
+      "status": 200
     }
   ]
 }
