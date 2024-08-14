@@ -1,4 +1,4 @@
-import {useEffect, useState, useMemo, useRef, useCallback} from "react";
+import {useEffect, useState, useMemo, useRef, useCallbac, memo} from "react";
 
 import daMap from "./assets/USMap1.png";
 import pointP from "./assets/point-purple.png";
@@ -12,6 +12,7 @@ import aPointG from "./assets/assignedPointGrey.png";
 
 
 import "./App.css";
+import Point from './Point';
 
 function Map2(props){
     let foundIt = false;
@@ -26,7 +27,9 @@ function Map2(props){
     const [showForm, setShowForm] = useState([0,0,false,false]);
     const [input, setInput] = useState([]);
     const [rectSize, setRectSize] = useState(null);
+    const [measurements, setMeasurements] = useState(null);
     
+
 
 
     //helper function to take care of info text display changes
@@ -59,20 +62,25 @@ function Map2(props){
 
     //runs when map is clicked 
     const handleClick = ({pageX, pageY, clientX, clientY}) => {
-        const rect = document.getElementById("clickSpace").getBoundingClientRect();
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
+        const rect = document.getElementById("clickSpace");
+        const x = pageX - rect.offsetLeft;
+        const y = pageY - rect.offsetTop;
         foundIt = false;
+        document.getElementById("headery").textContent= pageY ;
         points.forEach((pointy) => {
-            let pointyCheckX = pointy.x * rectSize.width + rectSize.left + scrollX
-            let pointyCheckY = pointy.y * rectSize.height + rectSize.top + scrollY
+            let pointyCheckX = pointy.x * rect.offsetWidth
+            let pointyCheckY = pointy.y * rect.offsetHeight
+
+            console.log(`Click Position: (${pageX}, ${pageY})`);
+            console.log(`Point Position: (${pointyCheckX}, ${pointyCheckY})`);
+            
             //if map click is in the range of an existing point
-            if(((pageX <= (pointyCheckX + 15)) && (pageX >= (pointyCheckX - 15)) ) && ((pageY <= (pointyCheckY + 15)) && (pageY >= (pointyCheckY - 15)) )){
+            if(((pageX - rect.offsetLeft <= (pointyCheckX + 100)) && (pageX  - rect.offsetLeft>= (pointyCheckX - 100)) ) && ((pageY - rect.offsetTop<= (pointyCheckY + 100)) && (pageY - rect.offsetTop>= (pointyCheckY - 100)) )){
                 foundIt=true;
                 setShowForm([pointy.x,pointy.y,false,false])
                 document.getElementById("headery").textContent= "Task Info" ;
-                document.getElementById("textyX").textContent = "X Coordinate: " + pointy.x;
-                document.getElementById("textyY").textContent = "Y Coordinate: " + pointy.y;
+                document.getElementById("textyX").textContent = "X Coordinate: " + pointy.x * rect.offsetWidth;
+                document.getElementById("textyY").textContent = "Y Coordinate: " + pointy.y * rect.offsetHeight;
                 document.getElementById("textyTitle").textContent = "Task Title: " + pointy.title;
                 document.getElementById("textyType").textContent = "Task Type: " + pointy.type;
                 document.getElementById("textyDesc").textContent = "Description: " + pointy.desc;
@@ -116,10 +124,10 @@ function Map2(props){
 
       //runs when task create form is submit, adds form data to point data list
     const handleSubmit = (event) => {
-        const rect = document.getElementById("clickSpace").getBoundingClientRect();
+        const rect = document.getElementById("clickSpace");
         event.preventDefault();
-        const newX = (showForm[0]) / rect.width;
-        const newY = (showForm[1]) / rect.height;
+        const newX = (showForm[0]) / rect.offsetWidth;
+        const newY = (showForm[1]) / rect.offsetHeight;
         if(input.type == undefined){
             input.type = "NPC";
         }
@@ -209,8 +217,8 @@ function Map2(props){
         useEffect(() => {
             console.log("page effected");
             const resize  = () => {
-                rect = document.getElementById("clickSpace").getBoundingClientRect();
-                setRectSize({width: rect.width, height: rect.height, left: rect.left, top: rect.top});
+                rect = document.getElementById("clickSpace");
+                setRectSize({width: rect.offsetWidth, height: rect.offsetHeight, left: rect.offsetLeft, top: rect.offsetTop});
             }
             window.addEventListener('resize', resize);
             resize();
@@ -219,6 +227,8 @@ function Map2(props){
             };
         }, [points]);
 
+
+
     return(
     <div>
         <div className="Title-text">OR83 Bounty Board Demo</div>
@@ -226,7 +236,7 @@ function Map2(props){
             <div className="click-space" id="clickSpace" onClick={handleClick}>
             {/* iterates through points and puts them on the map*/}
                 {points.map((point) => {
-                    rect = document.getElementById("clickSpace").getBoundingClientRect();
+                    rect = document.getElementById("clickSpace");
                     let pointColor = null;
                     if(point.type == "NPC"){
                         pointColor = pointP;
@@ -255,8 +265,9 @@ function Map2(props){
 
                     //coordinates used at key value*/
                     indexVar = point.x + " " + point.y
+
                     //renders point 
-                    return <img key={indexVar}  src={pointColor} className="point" style={{left: point.x * rectSize.width + rectSize.left + scrollX + "px", top: point.y * rectSize.height + rectSize.top + scrollY + "px"}}></img>      
+                    return <Point key={indexVar}  src={pointColor} className="point" left = {point.x} top = {point.y} />      
                 })}
                 <img src={daMap} className="Background-image" id="theMap" alt="Map of Western US" /> 
                 
@@ -292,6 +303,14 @@ function Map2(props){
                     </textarea>
                     <input type="submit" value="Submit" />
               </form>}
+              <div>
+              {
+              points.map((point) => {
+                return <p>point x: {point.x * document.getElementById("clickSpace").offsetWidth }
+                point y: {point.y * document.getElementById("clickSpace").offsetHeight}
+                 width: {} height: {document.getElementById("clickSpace").offsetHeight} </p>
+              })}
+              </div>
               <button className="texty" id="textyButton" onClick={assignFormHelper}> Assign Task</button> <br/> 
               <button className="texty" id="textyButton2" onClick={handleDelete}> Delete Task</button>
               {showForm[3] &&

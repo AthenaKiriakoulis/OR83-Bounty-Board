@@ -14,6 +14,7 @@ import aPointG from "./assets/assignedPointGrey.png";
 
 
 import "./App.css";
+import Point from './Point';
 
 function Map(props){
     let foundIt = false;
@@ -138,12 +139,12 @@ function Map(props){
     //runs when map is clicked 
     const handleClick = ({pageX, pageY, clientX, clientY}) => {
         const rect = document.getElementById("clickSpace").getBoundingClientRect();
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
+        const x = clientX - rect.left + scrollX;
+        const y = clientY - rect.top + scrollY;
         foundIt = false;
         points.forEach((pointy) => {
-            let pointyCheckX = pointy.x * rectSize.width + rectSize.left + scrollX
-            let pointyCheckY = pointy.y * rectSize.height + rectSize.top + scrollY
+            let pointyCheckX = pointy.x * rectSize.width + rectSize.left
+            let pointyCheckY = pointy.y * rectSize.height + rectSize.top
             //if map click is in the range of an existing point
             if(((pageX <= (pointyCheckX + 15)) && (pageX >= (pointyCheckX - 15)) ) && ((pageY <= (pointyCheckY + 15)) && (pageY >= (pointyCheckY - 15)) )){
                 foundIt=true;
@@ -351,7 +352,7 @@ function Map(props){
                     //coordinates used at key value*/
                     indexVar = point.x + " " + point.y
                     //renders point 
-                    return <img key={indexVar}  src={pointColor} className="point" style={{left: point.x * rectSize.width + rectSize.left + scrollX + "px", top: point.y * rectSize.height + rectSize.top + scrollY + "px"}}></img>      
+                    return <Point key={indexVar}  src={pointColor} className="point" left = {point.x} top = {point.y} />     
                 })}
                 <img src={daMap} className="Background-image" id="theMap" alt="Map of Western US" /> 
                 
