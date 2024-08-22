@@ -138,15 +138,15 @@ function Map(props){
 
     //runs when map is clicked 
     const handleClick = ({pageX, pageY, clientX, clientY}) => {
-        const rect = document.getElementById("clickSpace").getBoundingClientRect();
-        const x = clientX - rect.left + scrollX;
-        const y = clientY - rect.top + scrollY;
+        const rect = document.getElementById("clickSpace");
+        const x = pageX - rect.offsetLeft;
+        const y = pageY - rect.offsetTop;
         foundIt = false;
         points.forEach((pointy) => {
-            let pointyCheckX = pointy.x * rectSize.width + rectSize.left
-            let pointyCheckY = pointy.y * rectSize.height + rectSize.top
+            let pointyCheckX = pointy.x * rect.offsetWidth
+            let pointyCheckY = pointy.y * rect.offsetHeight
             //if map click is in the range of an existing point
-            if(((pageX <= (pointyCheckX + 15)) && (pageX >= (pointyCheckX - 15)) ) && ((pageY <= (pointyCheckY + 15)) && (pageY >= (pointyCheckY - 15)) )){
+            if(((pageX - rect.offsetLeft <= (pointyCheckX + 100)) && (pageX  - rect.offsetLeft>= (pointyCheckX - 100)) ) && ((pageY - rect.offsetTop<= (pointyCheckY + 100)) && (pageY - rect.offsetTop>= (pointyCheckY - 100)) )){
                 foundIt=true;
                 setShowForm([pointy.x,pointy.y,false,false])
                 document.getElementById("headery").textContent= "Task Info" ;
@@ -195,10 +195,10 @@ function Map(props){
 
       //runs when task create form is submit, adds form data to point data list
     const handleSubmit = (event) => {
-        const rect = document.getElementById("clickSpace").getBoundingClientRect();
+        const rect = document.getElementById("clickSpace");
         event.preventDefault();
-        const newX = (showForm[0]) / rect.width;
-        const newY = (showForm[1]) / rect.height;
+        const newX = (showForm[0]) / rect.offsetWidth;
+        const newY = (showForm[1]) / rect.offsetHeight;
         if(input.type == undefined){
             input.type = "NPC";
         }
@@ -304,8 +304,8 @@ function Map(props){
         useEffect(() => {
             console.log("page effected");
             const resize  = () => {
-                rect = document.getElementById("clickSpace").getBoundingClientRect();
-                setRectSize({width: rect.width, height: rect.height, left: rect.left, top: rect.top});
+                rect = document.getElementById("clickSpace");
+                setRectSize({width: rect.offsetWidth, height: rect.offsetHeight, left: rect.offsetLeft, top: rect.offsetTop});
             }
             window.addEventListener('resize', resize);
             resize();

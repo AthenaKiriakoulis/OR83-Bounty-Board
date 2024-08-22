@@ -303,14 +303,6 @@ function Map2(props){
                     </textarea>
                     <input type="submit" value="Submit" />
               </form>}
-              <div>
-              {
-              points.map((point) => {
-                return <p>point x: {point.x * document.getElementById("clickSpace").offsetWidth }
-                point y: {point.y * document.getElementById("clickSpace").offsetHeight}
-                 width: {} height: {document.getElementById("clickSpace").offsetHeight} </p>
-              })}
-              </div>
               <button className="texty" id="textyButton" onClick={assignFormHelper}> Assign Task</button> <br/> 
               <button className="texty" id="textyButton2" onClick={handleDelete}> Delete Task</button>
               {showForm[3] &&
