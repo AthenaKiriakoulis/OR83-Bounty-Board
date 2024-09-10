@@ -1,6 +1,7 @@
 import {useEffect, useState, useMemo, useRef, useCallback} from "react";
 import { collection, addDoc, getDocs, getDoc, doc, setDoc, updateDoc} from "firebase/firestore";
 import {db} from "./firebase.js";
+import query from "./mondayAPI.js";
 
 import daMap from "./assets/research-poster-map.jpg";
 import pointP from "./assets/point-purple.png";
@@ -133,6 +134,7 @@ function Map(props){
             console.error("Error occured when deleting point: ", error);
         }
         };
+
 ///////////////////////////////////////////////////////////////////////
 
 
@@ -146,7 +148,7 @@ function Map(props){
             let pointyCheckX = pointy.x * rect.offsetWidth
             let pointyCheckY = pointy.y * rect.offsetHeight
             //if map click is in the range of an existing point
-            if(((pageX - rect.offsetLeft <= (pointyCheckX + 100)) && (pageX  - rect.offsetLeft>= (pointyCheckX - 100)) ) && ((pageY - rect.offsetTop<= (pointyCheckY + 100)) && (pageY - rect.offsetTop>= (pointyCheckY - 100)) )){
+            if(((pageX - rect.offsetLeft <= (pointyCheckX + 15)) && (pageX  - rect.offsetLeft>= (pointyCheckX - 15)) ) && ((pageY - rect.offsetTop<= (pointyCheckY + 15)) && (pageY - rect.offsetTop>= (pointyCheckY - 15)) )){
                 foundIt=true;
                 setShowForm([pointy.x,pointy.y,false,false])
                 document.getElementById("headery").textContent= "Task Info" ;
@@ -159,6 +161,7 @@ function Map(props){
 
                 document.getElementById("textyButton").style.display = "block";
                 document.getElementById("textyButton2").style.display = "block";
+                document.getElementById("textyButton3").style.display = "block";
                 
                 //makes text appear
                 textyHelper(textArr, "block");
@@ -178,6 +181,7 @@ function Map(props){
             setShowForm([x,y,true,false]);
             document.getElementById("textyButton").style.display = "none";
             document.getElementById("textyButton2").style.display = "none";
+            document.getElementById("textyButton3").style.display = "none";
             textyHelper(textArr, "none");
             textyHelper(textArr, "blank");
 
@@ -216,8 +220,11 @@ function Map(props){
 
             addToDatabase(newPoints);
             return newPoints;      
-          }); // <--- Call the memoized function
+          }); 
+
         
+        //adds item to monday.com
+        query.createItem(input.title, input.type, "X" + newX + "Y" + newY);
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent= "Task Created!";
@@ -253,15 +260,20 @@ function Map(props){
                 updatedPoint.type = updatedPoint.type;
             } 
             setPoints(newpointArr);
-            updatePoint(newpointArr); // Pass the updated point, not the array
+            updatePoint(newpointArr);
+
           }else{
-            console.log("Error: Point Not Found")
+            console.log("Error: Point not found")
         }
+
+        //updates monday.com item to add assignee
+        query.updateItem(pointID, input.assignee);
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Assigned!";
         document.getElementById("textyButton").style.display = "none";
         document.getElementById("textyButton2").style.display = "none";
+        document.getElementById("textyButton3").style.display = "none";
         textyHelper(textArr, "none");
         textyHelper(textArr, "blank");
         }
@@ -281,14 +293,25 @@ function Map(props){
           }else{
             console.log("Error: Point Not Found")
         }
+
+        //deletes item from Monday.com
+        query.deleteItem(pointID);
+
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Deleted!";
         document.getElementById("textyButton").style.display = "none";
         document.getElementById("textyButton2").style.display = "none";
+        document.getElementById("textyButton3").style.display = "none";
+
         textyHelper(textArr, "none");
         textyHelper(textArr, "blank");
         }
+
+
+    const handleMonday = () => {
+            query.createItem();
+         }
 
 
     //calls fetch when reload button is pressed
@@ -296,8 +319,7 @@ function Map(props){
         fetchPost();
     }       
 
-
-       
+  
 
 /////////////////////////////////////////////////////////////
         //updates the point positions for when the 
@@ -314,6 +336,7 @@ function Map(props){
             };
         }, [points]);
 
+/////////////////////////////////////////////////////////////
     return(
     <div>
         <div className="Title-text">OR83 Bounty Board</div>
@@ -390,6 +413,8 @@ function Map(props){
               </form>}
               <button className="texty" id="textyButton" onClick={assignFormHelper}> Assign Task</button> <br/> 
               <button className="texty" id="textyButton2" onClick={handleDelete}> Delete Task</button>
+              <button className="texty" id="textyButton3" onClick={handleMonday}> Monday</button>
+
               {showForm[3] &&
               <form onSubmit={handleSubmit1}>
                 <label htmlFor="assignee">Assign to:</label>

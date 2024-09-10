@@ -148,6 +148,8 @@ function Map2(props){
         
         //tells form to hide
         setShowForm([0,0,false,false]);
+
+        
         document.getElementById("headery").textContent= "Task Created!";
       }
 
@@ -213,7 +215,7 @@ function Map2(props){
        
 
 /////////////////////////////////////////////////////////////
-        //updates the point positions for when the 
+        //updates the point positions for when the page size is changed
         useEffect(() => {
             console.log("page effected");
             const resize  = () => {
