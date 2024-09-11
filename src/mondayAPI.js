@@ -63,7 +63,75 @@ const createItem = async (title, type, id) => {
 
 
 
-const updateItem = async (id, assignee) => {
+const updateItem = async (id, title, type) => {
+  let taskID =  "";
+    //gets task id
+    try{
+
+      const response = await axios.post(
+        "https://api.monday.com/v2", 
+        {
+          query: `
+          query {
+            items_page_by_column_values (limit: 1, board_id: ${BOARD_ID}, columns: [{column_id: "text5__1", column_values: ["${id}"]}]) {
+              cursor
+              items {
+                id
+                name
+              }
+            }
+          }
+          `
+        },
+        {
+          headers: {
+            'Authorization': API_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      taskID = response.data.data.items_page_by_column_values.items[0].id;
+      console.log(response.data.data.items_page_by_column_values.items[0].id);
+      console.log("it work!");
+
+    }catch(error){
+      console.error("Error:", error);
+      console.log("it dont work :(");
+    }
+
+    //updates item with task id
+    try{
+
+      const response = await axios.post(
+        "https://api.monday.com/v2", 
+        {
+          query: `
+          mutation {
+            change_multiple_column_values (item_id: ${taskID}, board_id: ${BOARD_ID}, column_values: " { \\\"name\\\":\\\"${title}\\\", \\\"text4__1\\\":\\\"${type}\\\"}") {
+              id
+            }
+          }
+          `
+        },
+        {
+          headers: {
+            'Authorization': API_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log(response.data);
+      console.log("it work!");
+
+    }catch(error){
+      console.error("Error:", error);
+      console.log("it dont work :(");
+    }
+}
+
+
+const assignItem = async (id, assignee) => {
   let taskID =  "";
     //gets task id
     try{
@@ -203,6 +271,7 @@ const deleteItem = async (id) => {
 
 let queries = {
   createItem,
+  assignItem,
   updateItem,
   deleteItem
 }

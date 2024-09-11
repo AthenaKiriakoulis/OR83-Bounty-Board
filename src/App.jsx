@@ -1,6 +1,5 @@
 import {useState} from "react";
-import { Route, Routes } from 'react-router-dom';
-import Hello from "./Hello.jsx";
+import { Route, Routes } from 'react-router-dom';;
 import Map from "./Map.jsx";
 import Map2 from "./Map2.jsx";
 import Login from "./Login.jsx";

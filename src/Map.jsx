@@ -25,13 +25,16 @@ function Map(props){
     const initialFetch = useRef(true);
     
     const [points, setPoints] = useState([]);
+
+    const [doEdit, setdoEdit] = useState(false);
+    //showform [0] and [1] hold coordinates of current point
     //controls which form is shown. If showform[2] is true, first form is shown. 
     //If showform[3] is true, second form is shown
     const [showForm, setShowForm] = useState([0,0,false,false]);
     const [input, setInput] = useState([]);
     const [rectSize, setRectSize] = useState(null);
     
-
+///////////////////////Helper Functions/////////////////////////////////////////////////
 
     //helper function to take care of info text display changes
     const textyHelper = (arr, choice) => {
@@ -60,8 +63,30 @@ function Map(props){
         document.getElementById("textyButton").style.display = "none";
 
     }
+
+
+    const editFormHelper = () => {
+        //this updates showForm to only change showform[2] to true
+        const updateForm = showForm.map((val, index) => {
+            if(index == 2){
+                return val = true;
+            }
+            else{
+                return val;
+            }
+        });
+        setShowForm(updateForm);
+        setdoEdit(true);
+        document.getElementById("textyButton").style.display = "none";
+        document.getElementById("textyButton2").style.display = "none";
+        document.getElementById("textyButton3").style.display = "none";
+        textyHelper(textArr, "none");
+        textyHelper(textArr, "blank");
+
+    }
  
-////////////////////////////////////////////////////////////////////////
+ 
+///////////////////////Firestore Commands/////////////////////////////////////////////////
     //adds point to firestore database
     const addToDatabase = async (point) => {
         try {
@@ -70,12 +95,12 @@ function Map(props){
             const dataRef = doc(collectionRef, "daData");
             const pointData = {data : point} 
             await setDoc(dataRef, pointData);
-            console.log("Document successfully written with ID: ", dataRef.id);
+            console.log("Point successfully written with ID: ", dataRef.id);
 
             //rerender the page to get all the points on the map
             
           } catch (e) {
-            console.error("Error occured when adding document: ", e);
+            console.error("Error occured when adding point: ", e);
           }
         
 
@@ -100,9 +125,9 @@ function Map(props){
                     return prevPoints;
                 });
             } else {
-                console.log("No such document!");
+                console.log("No such point!");
             }
-            console.log("point fetched");
+            console.log("Point fetched");
        
     }
 
@@ -115,9 +140,9 @@ function Map(props){
             const pointRef = doc(db, "points", "daData");
           const pointData = {data: point}
           await updateDoc(pointRef, pointData);
-          console.log("Document Successfully updated");
+          console.log("Point successfully updated");
         } catch (error) {
-            console.error("Error occured when updating document: ", error);
+            console.error("Error occured when updating point: ", error);
         }
       };
 
@@ -129,7 +154,7 @@ function Map(props){
             const pointRef = doc(db, "points", "daData");
             const pointData = {data: point}
             await updateDoc(pointRef, pointData);
-            console.log("Point Sucessfully Removed");
+            console.log("Point sucessfully removed");
         } catch (error) {
             console.error("Error occured when deleting point: ", error);
         }
@@ -262,12 +287,14 @@ function Map(props){
             setPoints(newpointArr);
             updatePoint(newpointArr);
 
+            //updates monday.com item to add assignee
+            query.assignItem(pointID, input.assignee);
+
           }else{
             console.log("Error: Point not found")
         }
 
-        //updates monday.com item to add assignee
-        query.updateItem(pointID, input.assignee);
+
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Assigned!";
@@ -276,7 +303,54 @@ function Map(props){
         document.getElementById("textyButton3").style.display = "none";
         textyHelper(textArr, "none");
         textyHelper(textArr, "blank");
+    }
+
+
+    //runs when edit form is submitted, adds new form data to form data list    
+    const handleSubmit2 = (event) => {
+        event.preventDefault();
+        //finds right point in point list and changes assigned value to form input
+        
+        const pointID = "X" + showForm[0] + "Y" + showForm[1];
+        const newpointArr = [...points];
+        const index = newpointArr.findIndex((point) => point.id === pointID);
+        if (index!== -1) {
+            console.log("I got herrrre editing")
+            const updatedPoint = newpointArr[index];
+            if(input.title != null){ 
+                updatedPoint.title = input.title;
+            }
+            if(input.type != null){ 
+                updatedPoint.type = input.type;
+            }
+            if(input.desc != null){
+                updatedPoint.desc = input.desc;
+            }
+
+
+            setPoints(newpointArr);
+            updatePoint(newpointArr);
+
+            //updates monday.com item to change title and type
+            query.updateItem(pointID, updatedPoint.title, updatedPoint.type);
+
+          }else{
+            console.log("Error: Point not found")
         }
+
+
+        //tells form to hide
+        setShowForm([0,0,false,false]);
+        document.getElementById("headery").textContent = "Task Edited!";
+        document.getElementById("textyButton").style.display = "none";
+        document.getElementById("textyButton2").style.display = "none";
+        document.getElementById("textyButton3").style.display = "none";
+        textyHelper(textArr, "none");
+        textyHelper(textArr, "blank");
+    }
+
+
+
 
     //runs when delete button is clicked and preps delete function
     const handleDelete = () => {     
@@ -309,17 +383,7 @@ function Map(props){
         }
 
 
-    const handleMonday = () => {
-            query.createItem();
-         }
 
-
-    //calls fetch when reload button is pressed
-    const handleReload = () => {
-        fetchPost();
-    }       
-
-  
 
 /////////////////////////////////////////////////////////////
         //updates the point positions for when the 
@@ -340,7 +404,6 @@ function Map(props){
     return(
     <div>
         <div className="Title-text">OR83 Bounty Board</div>
-        <button className="reloader" id="textyReload" onClick={handleReload}> Reload</button>
         <div className="wrapper">
             <div className="click-space" id="clickSpace" onClick={handleClick}>
             {/* iterates through points and puts them on the map*/}
@@ -390,7 +453,7 @@ function Map(props){
                 <p className="texty" id="textyDesc" ></p> <br/>
                 <p className="texty" id="textyAssign" ></p> <br/>
                 {showForm[2] &&
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={doEdit ? handleSubmit2 : handleSubmit}>
                     <label htmlFor="title">Title:</label>
                         <input type="text" id ="title" name="title" onChange={handleChange}/><br/>
                     <label htmlFor="coordX">X Coordinate:</label>
@@ -413,7 +476,7 @@ function Map(props){
               </form>}
               <button className="texty" id="textyButton" onClick={assignFormHelper}> Assign Task</button> <br/> 
               <button className="texty" id="textyButton2" onClick={handleDelete}> Delete Task</button>
-              <button className="texty" id="textyButton3" onClick={handleMonday}> Monday</button>
+              <button className="texty" id="textyButton3" onClick={editFormHelper}> Edit Task</button>
 
               {showForm[3] &&
               <form onSubmit={handleSubmit1}>
