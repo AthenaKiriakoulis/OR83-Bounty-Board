@@ -1,7 +1,7 @@
 import {useEffect, useState, useMemo, useRef, useCallback} from "react";
-import { collection, addDoc, getDocs, getDoc, doc, setDoc, updateDoc} from "firebase/firestore";
-import {db} from "./firebase.js";
+import firestore from "./Firestore.js";
 import query from "./mondayAPI.js";
+import helpers from "./helpers.js";
 
 import daMap from "./assets/research-poster-map.jpg";
 import pointP from "./assets/point-purple.png";
@@ -21,12 +21,28 @@ function Map(props){
     let foundIt = false;
     let rect;
     let indexVar = "";
-    let textArr =["textyX", "textyY", "textyTitle", "textyType", "textyDesc", "textyAssign"]
+    let textArr =["textyX", "textyY", "textyTitle", "textyType", "textyDesc", "textyAssign"];
+    let textBlankArr =[["textyX", ""], ["textyY", ""], ["textyTitle", ""], ["textyType", ""], ["textyDesc", ""], ["textyAssign", ""]];
+    let buttonArr = ["textyButton", "textyButton2", "textyButton3" ];
+
     const initialFetch = useRef(true);
+
+    const pointTypes = {
+        "NPC": [pointP, aPointP],
+        "City": [pointR, aPointR],
+        "Encounter": [pointB, aPointB],
+        "Misc": [pointG, aPointG]
+    }
+
     
     const [points, setPoints] = useState([]);
 
+    //stores value and boolean for red circle that pops up when point is clicked
+    const [tempPoint, setTempPoint] = useState([0,0,false]);
+
+    //tells program whether to use editing fucntion or creating function at submit
     const [doEdit, setdoEdit] = useState(false);
+
     //showform [0] and [1] hold coordinates of current point
     //controls which form is shown. If showform[2] is true, first form is shown. 
     //If showform[3] is true, second form is shown
@@ -34,133 +50,9 @@ function Map(props){
     const [input, setInput] = useState([]);
     const [rectSize, setRectSize] = useState(null);
     
-///////////////////////Helper Functions/////////////////////////////////////////////////
-
-    //helper function to take care of info text display changes
-    const textyHelper = (arr, choice) => {
-        for(let i in arr){
-            if(choice == "blank"){
-                document.getElementById(arr[i]).textContent = "";
-            }
-            else{
-                document.getElementById(arr[i]).style.display = choice;
-            }           
-        }     
-      }
-
-    //this allows the assign form to be shown
-    const assignFormHelper = () => {
-        //this updates showForm to only change showform[3] to true
-        const updateForm = showForm.map((val, index) => {
-            if(index == 3){
-                return val = true;
-            }
-            else{
-                return val;
-            }
-        });
-        setShowForm(updateForm);
-        document.getElementById("textyButton").style.display = "none";
-
-    }
 
 
-    const editFormHelper = () => {
-        //this updates showForm to only change showform[2] to true
-        const updateForm = showForm.map((val, index) => {
-            if(index == 2){
-                return val = true;
-            }
-            else{
-                return val;
-            }
-        });
-        setShowForm(updateForm);
-        setdoEdit(true);
-        document.getElementById("textyButton").style.display = "none";
-        document.getElementById("textyButton2").style.display = "none";
-        document.getElementById("textyButton3").style.display = "none";
-        textyHelper(textArr, "none");
-        textyHelper(textArr, "blank");
-
-    }
- 
- 
-///////////////////////Firestore Commands/////////////////////////////////////////////////
-    //adds point to firestore database
-    const addToDatabase = async (point) => {
-        try {
-            console.log("point is " + point);
-            const collectionRef = collection(db, "points");
-            const dataRef = doc(collectionRef, "daData");
-            const pointData = {data : point} 
-            await setDoc(dataRef, pointData);
-            console.log("Point successfully written with ID: ", dataRef.id);
-
-            //rerender the page to get all the points on the map
-            
-          } catch (e) {
-            console.error("Error occured when adding point: ", e);
-          }
-        
-
-    }
-
-
-
-
-    //gets the points data and brings it back to the website
-    const fetchPost = async () => {
-       
-            const docRef = doc(db, "points", "daData");
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const newPoints = docSnap.data().data;
-                setPoints((prevPoints) => {
-                    // Only update if new data is different from current state
-                    if (JSON.stringify(prevPoints) !== JSON.stringify(newPoints)) {
-                        return newPoints;
-                    }
-                    return prevPoints;
-                });
-            } else {
-                console.log("No such point!");
-            }
-            console.log("Point fetched");
-       
-    }
-
-
-
-    //Updates point in database to add assignee
-    const updatePoint = async (point) => {
-        console.log("I updateeee")
-        try {
-            const pointRef = doc(db, "points", "daData");
-          const pointData = {data: point}
-          await updateDoc(pointRef, pointData);
-          console.log("Point successfully updated");
-        } catch (error) {
-            console.error("Error occured when updating point: ", error);
-        }
-      };
-
-
-        //Updates point in database to add assignee
-    const deletePoint = async (point) => {
-        console.log("I deletttte")
-        try {
-            const pointRef = doc(db, "points", "daData");
-            const pointData = {data: point}
-            await updateDoc(pointRef, pointData);
-            console.log("Point sucessfully removed");
-        } catch (error) {
-            console.error("Error occured when deleting point: ", error);
-        }
-        };
-
-///////////////////////////////////////////////////////////////////////
+////////////////////////Click Functions///////////////////////////////////////////////
 
 
     //runs when map is clicked 
@@ -172,43 +64,47 @@ function Map(props){
         points.forEach((pointy) => {
             let pointyCheckX = pointy.x * rect.offsetWidth
             let pointyCheckY = pointy.y * rect.offsetHeight
-            //if map click is in the range of an existing point
+            //if map click is in the radius of 15 pixels of an existing point in the database
             if(((pageX - rect.offsetLeft <= (pointyCheckX + 15)) && (pageX  - rect.offsetLeft>= (pointyCheckX - 15)) ) && ((pageY - rect.offsetTop<= (pointyCheckY + 15)) && (pageY - rect.offsetTop>= (pointyCheckY - 15)) )){
                 foundIt=true;
                 setShowForm([pointy.x,pointy.y,false,false])
-                document.getElementById("headery").textContent= "Task Info" ;
-                document.getElementById("textyX").textContent = "X Coordinate: " + pointy.x;
-                document.getElementById("textyY").textContent = "Y Coordinate: " + pointy.y;
-                document.getElementById("textyTitle").textContent = "Task Title: " + pointy.title;
-                document.getElementById("textyType").textContent = "Task Type: " + pointy.type;
-                document.getElementById("textyDesc").textContent = "Description: " + pointy.desc;
-                document.getElementById("textyAssign").textContent = "Assigned To: " + pointy.assigned;
 
-                document.getElementById("textyButton").style.display = "block";
-                document.getElementById("textyButton2").style.display = "block";
-                document.getElementById("textyButton3").style.display = "block";
-                
+                let textContentArr = [
+                    ["headery", "Task Info"], 
+                    ["textyX", "X Coordinate: " + pointy.x],
+                    ["textyY", "Y Coordinate: " + pointy.y], 
+                    ["textyTitle", "Task Title: " + pointy.title],
+                    ["textyType","Task Type: " + pointy.type], 
+                    ["textyDesc", "Description: " + pointy.desc],
+                    ["textyAssign", "Assigned To: " + pointy.assignee]
+                ]
+     
+                //tells temp point not to appear 
+                setTempPoint([0, 0,false]);
+
+
                 //makes text appear
-                textyHelper(textArr, "block");
+                helpers.displayHelper(textArr, "block");
+                helpers.displayHelper(buttonArr, "block");
+                helpers.textyHelper(textContentArr);
                 
                 
             }
-            else{
-            }
+
         
         });
         //if click wasnt in the range of any of the points
         if(points.length == 0 || foundIt == false){
             document.getElementById("headery").textContent= "Create New Task";
 
-            //show the form with click coordinates already in the form
-            
+
+
+            //show the form with click coordinates already in the form 
             setShowForm([x,y,true,false]);
-            document.getElementById("textyButton").style.display = "none";
-            document.getElementById("textyButton2").style.display = "none";
-            document.getElementById("textyButton3").style.display = "none";
-            textyHelper(textArr, "none");
-            textyHelper(textArr, "blank");
+            setTempPoint([pageX, pageY,true]);
+            helpers.displayHelper(buttonArr, "none");
+            helpers.displayHelper(textArr, "none");
+            helpers.textyHelper(textBlankArr);
 
 
         }
@@ -219,6 +115,7 @@ function Map(props){
         const name = event.target.name;
         const value = event.target.value;
         setInput(values => ({...values, [name]: value}))
+
       }
 
 
@@ -226,6 +123,17 @@ function Map(props){
     const handleSubmit = (event) => {
         const rect = document.getElementById("clickSpace");
         event.preventDefault();
+
+        if(helpers.titleValidation(input.title)){
+             alert(helpers.titleValidation(input.title));
+             return;
+        }
+
+        if(helpers.descValidation(input.desc)){
+            alert(helpers.descValidation(input.desc));
+            return;
+       }
+        
         const newX = (showForm[0]) / rect.offsetWidth;
         const newY = (showForm[1]) / rect.offsetHeight;
         if(input.type == undefined){
@@ -239,31 +147,27 @@ function Map(props){
               y: newY,      
               title: input.title,      
               type: input.type,      
-              desc: input.desc,      
-              assigned: ""      
+              desc: input.desc,   
+              assigned: false,  
+              assignee: ""      
             }];
 
-            addToDatabase(newPoints);
+            firestore.addPoint(newPoints);
             return newPoints;      
           }); 
 
         
         //adds item to monday.com
         query.createItem(input.title, input.type, "X" + newX + "Y" + newY);
+        //clears input 
+        setInput({});
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent= "Task Created!";
       }
 
 
-    //calls fetchpost when page renders. 
-    //InitialFetch is there to make sure it doesnt infinitely loop
-    useEffect(() => {
-        if (initialFetch.current) {
-            initialFetch.current = false;
-            fetchPost();
-        }
-    }, []);
+
     
 
     //runs when taske assign is submit, adds form data to point data list
@@ -277,15 +181,18 @@ function Map(props){
         if (index!== -1) {
             console.log("I got herrrre")
             const updatedPoint = newpointArr[index];
-            updatedPoint.assigned = input.assignee;
-            if(updatedPoint.type.slice(-1) !== "A"){
-                updatedPoint.type += "A";
+            if(!input.assignee){
+                updatedPoint.assignee = "";   
+            }else{
+                updatedPoint.assignee = input.assignee;
+
+                if(!updatedPoint.assigned){
+                    updatedPoint.assigned = true;
+                }
             }
-            else{
-                updatedPoint.type = updatedPoint.type;
-            } 
+
             setPoints(newpointArr);
-            updatePoint(newpointArr);
+            firestore.updatePoint(newpointArr);
 
             //updates monday.com item to add assignee
             query.assignItem(pointID, input.assignee);
@@ -298,11 +205,9 @@ function Map(props){
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Assigned!";
-        document.getElementById("textyButton").style.display = "none";
-        document.getElementById("textyButton2").style.display = "none";
-        document.getElementById("textyButton3").style.display = "none";
-        textyHelper(textArr, "none");
-        textyHelper(textArr, "blank");
+        helpers.displayHelper(buttonArr, "none");
+        helpers.displayHelper(textArr, "none");
+        helpers.textyHelper(textBlankArr);
     }
 
 
@@ -329,7 +234,7 @@ function Map(props){
 
 
             setPoints(newpointArr);
-            updatePoint(newpointArr);
+            firestore.updatePoint(newpointArr);
 
             //updates monday.com item to change title and type
             query.updateItem(pointID, updatedPoint.title, updatedPoint.type);
@@ -342,11 +247,9 @@ function Map(props){
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Edited!";
-        document.getElementById("textyButton").style.display = "none";
-        document.getElementById("textyButton2").style.display = "none";
-        document.getElementById("textyButton3").style.display = "none";
-        textyHelper(textArr, "none");
-        textyHelper(textArr, "blank");
+        helpers.displayHelper(buttonArr, "none");
+        helpers.displayHelper(textArr, "none");
+        helpers.textyHelper(textBlankArr);
     }
 
 
@@ -363,7 +266,7 @@ function Map(props){
         if (index!== -1) {
             newpointArr.splice(index, 1); 
             setPoints(newpointArr);
-            deletePoint(newpointArr); 
+            firestore.deletePoint(newpointArr); 
           }else{
             console.log("Error: Point Not Found")
         }
@@ -374,31 +277,37 @@ function Map(props){
         //tells form to hide
         setShowForm([0,0,false,false]);
         document.getElementById("headery").textContent = "Task Deleted!";
-        document.getElementById("textyButton").style.display = "none";
-        document.getElementById("textyButton2").style.display = "none";
-        document.getElementById("textyButton3").style.display = "none";
-
-        textyHelper(textArr, "none");
-        textyHelper(textArr, "blank");
+        helpers.displayHelper(buttonArr, "none");
+        helpers.displayHelper(textArr, "none");
+        helpers.textyHelper(textBlankArr);
         }
 
 
 
 
-/////////////////////////////////////////////////////////////
-        //updates the point positions for when the 
-        useEffect(() => {
-            console.log("page effected");
-            const resize  = () => {
-                rect = document.getElementById("clickSpace");
-                setRectSize({width: rect.offsetWidth, height: rect.offsetHeight, left: rect.offsetLeft, top: rect.offsetTop});
-            }
-            window.addEventListener('resize', resize);
-            resize();
-            return () => {
-              window.removeEventListener('resize', resize);
-            };
-        }, [points]);
+///////////////////////Render Fucntions//////////////////////////////////////
+    //updates the point positions for when the screen is resized
+    useEffect(() => {
+        console.log("page effected");
+        const resize  = () => {
+            rect = document.getElementById("clickSpace");
+            setRectSize({width: rect.offsetWidth, height: rect.offsetHeight, left: rect.offsetLeft, top: rect.offsetTop});
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        return () => {
+            window.removeEventListener('resize', resize);
+        };
+    }, [points]);
+
+    //calls fetchpost when page renders. 
+    //InitialFetch is there to make sure it doesnt infinitely loop
+    useEffect(() => {
+        if (initialFetch.current) {
+            initialFetch.current = false;
+            firestore.fetchPoints(setPoints);
+        }
+    }, []);
 
 /////////////////////////////////////////////////////////////
     return(
@@ -406,34 +315,21 @@ function Map(props){
         <div className="Title-text">OR83 Bounty Board</div>
         <div className="wrapper">
             <div className="click-space" id="clickSpace" onClick={handleClick}>
+            {tempPoint[2] &&
+                <div className ="tempPoint" style={{'left':tempPoint[0],'top':tempPoint[1]}}></div>
+            }
             {/* iterates through points and puts them on the map*/}
                 {points.map((point) => {
                     rect = document.getElementById("clickSpace").getBoundingClientRect();
+                    //chooses correct point color image depending on point type and if 
+                    //the assigned value is true or false
                     let pointColor = null;
-                    if(point.type == "NPC"){
-                        pointColor = pointP;
+                    if(point.assigned){
+                        pointColor = pointTypes[point.type][1]
+                    }else{
+                        pointColor = pointTypes[point.type][0]
                     }
-                    if(point.type == "NPCA"){
-                        pointColor = aPointP;
-                    }
-                    if(point.type == "City"){
-                        pointColor = pointR;
-                    }
-                    if(point.type == "CityA"){
-                        pointColor = aPointR;
-                    }
-                    if(point.type == "Encounter"){
-                        pointColor = pointB;
-                    }
-                    if(point.type == "EncounterA"){
-                        pointColor = aPointB
-                    }
-                    if(point.type == "Misc"){
-                        pointColor = pointG
-                    }
-                    if(point.type == "MiscA"){
-                        pointColor = aPointG;
-                    }
+                    
 
                     //coordinates used at key value*/
                     indexVar = point.x + " " + point.y
@@ -474,9 +370,9 @@ function Map(props){
                     </textarea>
                     <input type="submit" value="Submit" />
               </form>}
-              <button className="texty" id="textyButton" onClick={assignFormHelper}> Assign Task</button> <br/> 
+              <button className="texty" id="textyButton" onClick={() => helpers.assignFormHelper(buttonArr, showForm, setShowForm)}> Assign Task</button> <br/> 
               <button className="texty" id="textyButton2" onClick={handleDelete}> Delete Task</button>
-              <button className="texty" id="textyButton3" onClick={editFormHelper}> Edit Task</button>
+              <button className="texty" id="textyButton3" onClick={() => helpers.editFormHelper(textArr, buttonArr, textBlankArr, showForm, setShowForm, setdoEdit)}> Edit Task</button>
 
               {showForm[3] &&
               <form onSubmit={handleSubmit1}>
